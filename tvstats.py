@@ -5,7 +5,7 @@
   tvstats.py report     print once and exit
 
 Today and the last 7 days come from the TV's app open/close events (kept about 10 days).
-All time comes from the TV's yearly usage bucket, which starts when the TV was set up.
+All time comes from the TV's yearly usage bucket (since setup, for a TV less than a year old).
 """
 import os
 import re
@@ -17,7 +17,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-TV = os.environ.get('TV_HOST', '10.0.0.66:5555')
+TV = os.environ.get('TV_HOST', '')
+if TV and ':' not in TV:
+    TV += ':5555'
 ADB = os.environ.get('ADB') or shutil.which('adb') or '/opt/homebrew/bin/adb'
 REFRESH = 5
 
@@ -199,12 +201,14 @@ def render(tz):
     peak = max(per_day) or 1
     for d, s in zip(week, per_day):
         lines.append('  %s  %-30s %s' % (d.strftime('%a %b %d'), '█' * int(round(30 * s / peak)), fmt(s)))
-    lines += ['', '%sTracking since %s, when the TV was set up. Today and last 7 days use open/close events;%s' % (DIM, since, RESET),
+    lines += ['', '%sTracking since %s (start of the TV\'s yearly record). Today and last 7 days use open/close events;%s' % (DIM, since, RESET),
               '%sthe TV keeps those for about 10 days.%s' % (DIM, RESET)]
     return '\n'.join(lines)
 
 
 def main():
+    if not TV:
+        sys.exit('Set TV_HOST to your TV\'s IP address, e.g. TV_HOST=192.168.1.20 %s' % sys.argv[0])
     connect()
     tz = ZoneInfo(adb('shell', 'getprop persist.sys.timezone').strip() or 'UTC')
     if sys.argv[1:] == ['report']:
