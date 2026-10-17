@@ -40,6 +40,10 @@ The first time, the TV asks "Allow USB debugging?". Tick **Always allow from thi
 
 `android/` is a small app that runs on the TV, with no computer needed after setup:
 
+| Home panel | Dashboard |
+|---|---|
+| ![Watch-time panel on the Google TV Home screen](docs/home-panel.png) | ![Full-screen watch-time dashboard](docs/dashboard.png) |
+
 - **Home panel:** a small card under the clock on the Home screen with today's total, today's top 3
   apps and the last 7 days. It can't be selected with the remote and hides as soon as an app opens.
 - **Dashboard:** open **Watch time** from your apps for the full table and the 7-day chart.
