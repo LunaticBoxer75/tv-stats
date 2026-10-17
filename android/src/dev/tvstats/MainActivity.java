@@ -43,6 +43,7 @@ public final class MainActivity extends Activity {
         content.setOrientation(LinearLayout.VERTICAL);
         root.addView(content);
         setContentView(root);
+        SaveJob.schedule(this);
     }
 
     @Override
@@ -117,7 +118,8 @@ public final class MainActivity extends Activity {
         }
         if (s.since != Long.MAX_VALUE) {
             content.addView(text("Tracking since " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
-                    .format(new Date(s.since)) + " (start of the TV's yearly record).", 12, 0x77FFFFFF, false));
+                    .format(new Date(s.since)) + " (start of the TV's yearly record)."
+                    + (s.savedSince == null ? "" : " Daily history saved on this TV since " + s.savedSince + "."), 12, 0x77FFFFFF, false));
         }
     }
 

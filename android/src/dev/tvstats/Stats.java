@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /** Watch time from the TV's usage log, counted the same way as tvstats.py. */
 final class Stats {
@@ -29,9 +30,15 @@ final class Stats {
     final Map<String, Long> today = new HashMap<>(), week = new HashMap<>(), all = new HashMap<>();
     final long[] perDay = new long[7];   // apps only, oldest first
     final LocalDate[] days = new LocalDate[7];
+    /** Per-app time for each of the last KEPT days the TV still has events for, oldest first. */
+    final Map<LocalDate, Map<String, Long>> byDay = new TreeMap<>();
     long since = Long.MAX_VALUE;
+    LocalDate savedSince;
     private final Set<String> system = new HashSet<>(SYSTEM);
-    private final long[] dayStart = new long[8];
+    // The TV keeps about 10 days of events; read them all so History can save each day.
+    private static final int KEPT = 10;
+    private final LocalDate[] keptDays = new LocalDate[KEPT];
+    private final long[] dayStart = new long[KEPT + 1];
 
     static String homePackage(Context context) {
         ResolveInfo home = context.getPackageManager().resolveActivity(
@@ -45,9 +52,10 @@ final class Stats {
         UsageStatsManager usm = context.getSystemService(UsageStatsManager.class);
         long now = System.currentTimeMillis();
         ZoneId zone = ZoneId.systemDefault();
-        LocalDate first = LocalDate.now(zone).minusDays(6);
-        for (int i = 0; i < 8; i++) {
-            if (i < 7) s.days[i] = first.plusDays(i);
+        LocalDate first = LocalDate.now(zone).minusDays(KEPT - 1);
+        for (int i = 0; i <= KEPT; i++) {
+            if (i < KEPT) s.keptDays[i] = first.plusDays(i);
+            if (i >= KEPT - 7 && i < KEPT) s.days[i - (KEPT - 7)] = first.plusDays(i);
             s.dayStart[i] = first.plusDays(i).atStartOfDay(zone).toInstant().toEpochMilli();
         }
 
@@ -87,18 +95,24 @@ final class Stats {
             s.since = Math.min(s.since, u.getFirstTimeStamp());
         }
         if (fg != null) s.all.merge(fg, now - start, Long::sum);
-        // The TV's totals can drop time around a restart; the events are complete.
+        // The TV's totals can drop time around a restart, and lose it entirely after about two
+        // years; the events and the saved days are complete, so all time is never below them.
+        Map<String, Long> saved = History.save(context, s.byDay);
+        s.savedSince = History.firstDay(context);
+        for (Map.Entry<String, Long> h : saved.entrySet()) s.all.merge(h.getKey(), h.getValue(), Math::max);
         for (Map.Entry<String, Long> w : s.week.entrySet()) s.all.merge(w.getKey(), w.getValue(), Math::max);
         return s;
     }
 
     private void add(String pkg, long start, long end) {
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i < KEPT; i++) {
             long overlap = Math.min(end, dayStart[i + 1]) - Math.max(start, dayStart[i]);
             if (overlap <= 0) continue;
+            byDay.computeIfAbsent(keptDays[i], d -> new HashMap<>()).merge(pkg, overlap, Long::sum);
+            if (i < KEPT - 7) continue;
             week.merge(pkg, overlap, Long::sum);
-            if (i == 6) today.merge(pkg, overlap, Long::sum);
-            if (!isSystem(pkg)) perDay[i] += overlap;
+            if (i == KEPT - 1) today.merge(pkg, overlap, Long::sum);
+            if (!isSystem(pkg)) perDay[i - (KEPT - 7)] += overlap;
         }
     }
 

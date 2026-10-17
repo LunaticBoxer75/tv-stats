@@ -9,7 +9,7 @@ KEYSTORE="${KEYSTORE:-$HOME/.android/debug.keystore}"
 rm -rf build && mkdir -p build/classes build/gen
 "$BT/aapt2" compile --dir res -o build/res.zip
 "$BT/aapt2" link -I "$JAR" --manifest AndroidManifest.xml --java build/gen -o build/unsigned.apk build/res.zip \
-    --min-sdk-version 26 --target-sdk-version 31 --version-code 1 --version-name 0.1
+    --debug-mode --min-sdk-version 26 --target-sdk-version 31 --version-code 1 --version-name 0.1
 javac --release 11 -nowarn -classpath "$JAR" -d build/classes $(find src build/gen -name '*.java')
 "$BT/d8" --min-api 26 --lib "$JAR" --output build $(find build/classes -name '*.class')
 (cd build && zip -q unsigned.apk classes.dex)

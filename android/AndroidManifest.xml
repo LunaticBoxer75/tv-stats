@@ -28,6 +28,8 @@
         </activity>
 
         <service android:name=".HomePanelService" android:exported="false" />
+        <service android:name=".SaveJob" android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
