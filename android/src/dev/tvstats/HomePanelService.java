@@ -20,7 +20,8 @@ import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-/** Shows a small watch-time card in the top-right corner, under the clock, only while the TV's Home screen is in front. */
+/** Shows a small watch-time card in the top-right corner, under the clock, only while the TV's Home screen is in front.
+ *  Off until turned on in the app. */
 public final class HomePanelService extends Service {
     private static final long POLL_MS = 500, REDRAW_MS = 30_000;
 
@@ -32,8 +33,20 @@ public final class HomePanelService extends Service {
     private long checkedUntil, drawnAt;
     private boolean showing;
 
-    static void start(Context context) {
-        context.startForegroundService(new Intent(context, HomePanelService.class));
+    static boolean isEnabled(Context context) {
+        return context.getSharedPreferences("settings", MODE_PRIVATE).getBoolean("homePanel", false);
+    }
+
+    static void setEnabled(Context context, boolean enabled) {
+        context.getSharedPreferences("settings", MODE_PRIVATE).edit().putBoolean("homePanel", enabled).apply();
+        Intent service = new Intent(context, HomePanelService.class);
+        if (enabled) context.startForegroundService(service);
+        else context.stopService(service);
+    }
+
+    /** Starts the panel if the user turned it on. */
+    static void startIfEnabled(Context context) {
+        if (isEnabled(context)) context.startForegroundService(new Intent(context, HomePanelService.class));
     }
 
     @Override
